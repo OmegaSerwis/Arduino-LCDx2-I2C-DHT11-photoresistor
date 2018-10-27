@@ -2,7 +2,7 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 
-#define DHTPIN 2									// wyjœcie danych sensora jest do³¹czone do linii 2 Arduino
+#define DHTPIN 2									// wyjœcie danych sensora jest do³¹czone do linii 2 Arduino.
 #define DHTTYPE DHT11								// DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
