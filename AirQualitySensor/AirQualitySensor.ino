@@ -10,7 +10,9 @@
 #include <DHT.h>
 #include <Wire.h>
 #include <MQ135/MQ135.h>
+#include <Rtc_Pcf8563.h>
 
+int menu = 0;
 #define DHTPIN 2									// DHT11 data
 #define DHTTYPE DHT11								// DHT11
 DHT dht(DHTPIN, DHTTYPE);
@@ -29,9 +31,14 @@ byte degree[] = {									// custom char degree
 	B00000
 };
 
-int buzz = 1;										// buzzer PIN
-int pin = A5;										// MQ135 PIN
+int buzz = 12;										// buzzer PIN
+int button = 5;
+int pin = A5;										// MQ135 PIN Rsensor
 int sensorValue;
+int timerAlarm = 0;
+int timerA = 0;
+
+Rtc_Pcf8563 rtc;
 
 MQ135 gasSensor = MQ135(pin);
 
@@ -53,14 +60,21 @@ void setup()
 {
 	dht.begin();
 	pinMode(buzz, OUTPUT);
+	pinMode(button, INPUT_PULLUP);
 	digitalWrite(buzz, LOW);
 
 	lcd1Init();
 	lcd2Init();
+	Serial.begin(9600);
 }
 
 void loop()
 {
+	if (digitalRead(button) == LOW) {
+		menu = !menu;
+		delay(500);
+	}
+
 	float t = dht.readTemperature();				// read temp
 	float h = dht.readHumidity();					// read  humidity
 	sensorValue = analogRead(pin);					// data read form air sensor
@@ -92,30 +106,75 @@ void loop()
 		}
 		else
 		{
-			lcd_1.createChar(0, degree);
-			lcd_1.clear();
-			lcd_1.setCursor(0, 0);
-			lcd_1.print("Temp :");
-			lcd_1.setCursor(10, 0);
-			lcd_1.print("Wilg :");
-			lcd_1.setCursor(0, 1);
-			lcd_1.print(t);
-			lcd_1.write(0);
-			lcd_1.print("C");
-			lcd_1.setCursor(10, 1);
-			lcd_1.print(h);
-			lcd_1.print("%");
+			Serial.println(timerAlarm);
+				lcd_1.createChar(0, degree);
+				//lcd_1.clear();  Zakomentowane zeby nie mrugalo!
+				lcd_1.setCursor(0, 0);
+				lcd_1.print("Temp :");
+				lcd_1.setCursor(10, 0);
+				lcd_1.print("Wilg :");
+				lcd_1.setCursor(0, 1);
+				lcd_1.print(t);
+				lcd_1.write(0);
+				lcd_1.print("C ");
+				lcd_1.setCursor(10, 1);
+				lcd_1.print(h);
+				lcd_1.print("% ");
 
-			//float rzero = gasSensor.getRZero();					// calibration air sensor
-			lcd_2.setCursor(0, 0);
-			lcd_2.print("RZero= " + (String)rzero + " ");
+				if (co2_ppm > 350) {
+					timerAlarm = timerAlarm + 10;
+						
+						timerA = map(timerAlarm, 0, 2500, 1, 36);
 
-			//float co2_ppm = gasSensor.getPPM();					// air quality
-			lcd_2.setCursor(0, 1);
-			lcd_2.print("co2 ppm= " + (String)co2_ppm + " ");
-			//int ppm = co2_ppm / 4;
-			//lcd_2.print((String)ppm);
-			delay(100);
+						if (timerA == 1) {
+							digitalWrite(buzz, HIGH);
+						}
+						else if (timerA == 2) {
+							digitalWrite(buzz, LOW);
+						}
+						else if (timerA == 3) {
+							digitalWrite(buzz, HIGH);
+						}
+						else if (timerA == 4) {
+							digitalWrite(buzz, LOW);
+						}
+						else if (timerA == 5) {
+							digitalWrite(buzz, HIGH);
+						}
+						else if (timerA == 6) {
+							digitalWrite(buzz, LOW);
+						}
+						else
+						{
+							digitalWrite(buzz, LOW);
+						}
+
+					if (timerAlarm == 2500){
+						timerAlarm = 0;
+					}
+				}
+
+			if (menu == 0) {
+				//float rzero = gasSensor.getRZero();					// calibration air sensor
+				lcd_2.setCursor(0, 0);
+				lcd_2.print("RZero= " + (String)rzero + " ");
+
+				//float co2_ppm = gasSensor.getPPM();					// air quality
+				lcd_2.setCursor(0, 1);
+				lcd_2.print("co2 ppm= " + (String)co2_ppm + " ");
+				//int ppm = co2_ppm / 4;
+				//lcd_2.print((String)ppm);
+				delay(10);
+			}
+			if (menu == 1) {
+				lcd_2.setCursor(0,0);
+				lcd_2.print(rtc.formatTime());
+				lcd_2.print("        ");
+				lcd_2.setCursor(0,1);
+				lcd_2.print(rtc.formatDate());
+				lcd_2.print("       ");
+				delay(10);
+			}
 		}
 
 	}
